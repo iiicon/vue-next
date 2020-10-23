@@ -51,7 +51,7 @@ export const hydrate = ((...args) => {
 }) as RootHydrateFunction
 
 export const createApp = ((...args) => {
-  const app = ensureRenderer().createApp(...args)
+  const app = ensureRenderer().createApp(...args) // ensureRenderer 创建一个渲染器对象
 
   if (__DEV__) {
     injectNativeTagCheck(app)
@@ -59,14 +59,17 @@ export const createApp = ((...args) => {
 
   const { mount } = app
   app.mount = (containerOrSelector: Element | string): any => {
+    // 标准化容器
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
     const component = app._component
+      // / 如组件对象没有定义 render 函数和 template 模板，则取容器的 innerHTML 作为组件模板内容
     if (!isFunction(component) && !component.render && !component.template) {
       component.template = container.innerHTML
     }
     // clear content before mounting
     container.innerHTML = ''
+    // 真正的挂载
     const proxy = mount(container)
     container.removeAttribute('v-cloak')
     container.setAttribute('data-v-app', '')

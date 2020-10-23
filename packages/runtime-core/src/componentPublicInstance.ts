@@ -266,6 +266,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     const publicGetter = publicPropertiesMap[key]
     let cssModule, globalProperties
     // public $xxx properties
+    // 公开的 $xxx 属性或方法
     if (publicGetter) {
       if (key === '$attrs') {
         track(instance, TrackOpTypes.GET, key)
@@ -274,16 +275,19 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       return publicGetter(instance)
     } else if (
       // css module (injected by vue-loader)
+      // css 模块，通过 vue-loader 编译的时候注入
       (cssModule = type.__cssModules) &&
       (cssModule = cssModule[key])
     ) {
       return cssModule
     } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
       // user may set custom properties to `this` that start with `$`
+      // 用户自定义的属性，也用 `$` 开头
       accessCache![key] = AccessTypes.CONTEXT
       return ctx[key]
     } else if (
       // global properties
+      // 全局定义的属性
       ((globalProperties = appContext.config.globalProperties),
       hasOwn(globalProperties, key))
     ) {
@@ -312,6 +316,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     }
   },
 
+  // 顺序 setup data props $xx globalProperties ctx
   set(
     { _: instance }: ComponentRenderContext,
     key: string,
@@ -346,6 +351,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           value
         })
       } else {
+        // 用户自定义数据赋值
         ctx[key] = value
       }
     }

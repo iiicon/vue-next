@@ -346,69 +346,73 @@ export function createComponentInstance(
 ) {
   const type = vnode.type as ConcreteComponent
   // inherit parent app context - or - if root, adopt from root vnode
+  // 继承父组件实例上的 appContext，如果是根组件，则直接从根 vnode 中取。
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
   const instance: ComponentInternalInstance = {
-    uid: uid++,
-    vnode,
-    type,
-    parent,
-    appContext,
-    root: null!, // to be immediately set
-    next: null,
-    subTree: null!, // will be set synchronously right after creation
-    update: null!, // will be set synchronously right after creation
-    render: null,
-    proxy: null,
-    withProxy: null,
-    effects: null,
-    provides: parent ? parent.provides : Object.create(appContext.provides),
-    accessCache: null!,
-    renderCache: [],
+    uid: uid++, // 组件唯一 id
+    vnode, // 组件 vnode
+    type, // vnode 节点类型
+    parent, // 父组件实例
+    appContext, // app 上下文
+    root: null!, // to be immediately set // 根组件实例
+    next: null, // 新的组件 vnode
+    subTree: null!, // will be set synchronously right after creation // 子节点 vnode
+    update: null!, // will be set synchronously right after creation  // 带副作用更新函数
+    render: null,  // 渲染函数
+    proxy: null,  // 渲染上下文代理
+    withProxy: null,  // 带有 with 区块的渲染上下文代理
+    effects: null, // 响应式相关对象
+    provides: parent ? parent.provides : Object.create(appContext.provides), // 依赖注入相关
+    accessCache: null!, // 渲染代理的属性访问缓存
+    renderCache: [],  // 渲染缓存
 
     // state
-    ctx: EMPTY_OBJ,
-    data: EMPTY_OBJ,
-    props: EMPTY_OBJ,
-    attrs: EMPTY_OBJ,
-    slots: EMPTY_OBJ,
-    refs: EMPTY_OBJ,
-    setupState: EMPTY_OBJ,
-    setupContext: null,
+    ctx: EMPTY_OBJ, // 渲染上下文
+    data: EMPTY_OBJ, // data 数据
+    props: EMPTY_OBJ, // props 数据
+    attrs: EMPTY_OBJ,  // 普通属性
+    slots: EMPTY_OBJ, // 插槽相关
+    refs: EMPTY_OBJ, // 组件或者 DOM 的 ref 引用
+    setupState: EMPTY_OBJ, // setup 函数返回的响应式结果
+    setupContext: null, // setup 函数上下文数据
 
     // suspense related
     suspense,
-    asyncDep: null,
-    asyncResolved: false,
+    asyncDep: null, // suspense 异步依赖
+    asyncResolved: false, // suspense 异步依赖是否都已处理
 
     // lifecycle hooks
     // not using enums here because it results in computed properties
-    isMounted: false,
-    isUnmounted: false,
-    isDeactivated: false,
-    bc: null,
-    c: null,
-    bm: null,
-    m: null,
-    bu: null,
-    u: null,
-    um: null,
-    bum: null,
-    da: null,
-    a: null,
-    rtg: null,
-    rtc: null,
-    ec: null,
-    emit: null as any, // to be set immediately
+    isMounted: false, // 是否挂载
+    isUnmounted: false,  // 是否卸载
+    isDeactivated: false, // 是否激活
+    bc: null, // 生命周期，before create
+    c: null, // 生命周期，created
+    bm: null, // 生命周期，before mount
+    m: null,  // 生命周期，mounted
+    bu: null, // 生命周期，before update
+    u: null, // 生命周期，updated
+    um: null, // 生命周期，unmounted
+    bum: null, // 生命周期，before unmount
+    da: null,  // 生命周期, deactivated
+    a: null, // 生命周期 activated
+    rtg: null, // 生命周期 render triggered
+    rtc: null,  // 生命周期 render tracked
+    ec: null, // 生命周期 error captured
+    emit: null as any, // to be set immediately  // 派发事件方法
     emitted: null
   }
   if (__DEV__) {
+    // 初始化渲染上下文
     instance.ctx = createRenderContext(instance)
   } else {
     instance.ctx = { _: instance }
   }
+  // 初始化根组件指针
   instance.root = parent ? parent.root : instance
+  // 初始化派发事件方法
   instance.emit = emit.bind(null, instance)
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -449,7 +453,9 @@ export function setupComponent(
   isInSSRComponentSetup = isSSR
 
   const { props, children, shapeFlag } = instance.vnode
+  // 判断是否是一个有状态的组件
   const isStateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children)
 
@@ -487,18 +493,24 @@ function setupStatefulComponent(
   instance.accessCache = {}
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
+  // 创建渲染上下文代理
   instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
+
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }
   // 2. call setup()
+  // 判断处理 setup 函数
   const { setup } = Component
   if (setup) {
+    // 如果 setup 函数带参数，则创建一个 setupContext
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
     currentInstance = instance
     pauseTracking()
+
+    // 执行 setup 函数，获取结果
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -525,9 +537,11 @@ function setupStatefulComponent(
         )
       }
     } else {
+      // 处理 setup 执行结果
       handleSetupResult(instance, setupResult, isSSR)
     }
   } else {
+    // 完成组件实例设置
     finishComponentSetup(instance, isSSR)
   }
 }
@@ -595,10 +609,12 @@ function finishComponentSetup(
       if (__DEV__) {
         startMeasure(instance, `compile`)
       }
+
       Component.render = compile(Component.template, {
         isCustomElement: instance.appContext.config.isCustomElement,
         delimiters: Component.delimiters
       })
+
       if (__DEV__) {
         endMeasure(instance, `compile`)
       }
